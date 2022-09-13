@@ -1,3 +1,5 @@
+from re import X
+from urllib import request
 import fastapi 
 from typing import List
 from pydantic import BaseModel
@@ -47,7 +49,7 @@ class CarrinhoDeCompras(BaseModel):
     quantidade_de_produtos: int
 
 
-db_usuarios = {}
+db_usuarios = []
 db_produtos = {}
 db_end = {}        # enderecos_dos_usuarios
 db_carrinhos = {}
@@ -56,9 +58,21 @@ db_carrinhos = {}
 # Persistencia / Repositorio
 #===========================================
 
-def persistencia_salvar_usuario():
-    ...
+def persistencia_salvar_usuario(novo_usuario):
+    # codigo_novo_usuario = len(db_usuarios) + 1
+    # novo_usuario["id"] = codigo_novo_usuario
+    db_usuarios.append(novo_usuario)
+    return novo_usuario
     
+def persistencia_pesquisar_usuario_pelo_id(id):
+    id_procurado = None
+    for item in db_usuarios:
+        if item['id'] == id:
+            id_procurado = item
+            break
+        return FALHA
+    print(id_procurado)
+    return id_procurado
 
 def persistencia_salvar_produto():
     ...
@@ -68,8 +82,12 @@ def persistencia_salvar_produto():
 # Regras / Casos de uso
 #===========================================
 
-def regras_cadastrar_usuario():
-    ...
+def regras_cadastrar_usuario(novo_usuario):
+    novo_usuario = persistencia_salvar_usuario(novo_usuario)
+    return novo_usuario
+
+def regras_pesquisar_usuario_pelo_id(id):
+    return persistencia_pesquisar_usuario_pelo_id(id)
     
 
 def regras_cadastrar_produto():
@@ -83,23 +101,36 @@ def regras_cadastrar_produto():
 # Criar um usuário,
 # se tiver outro usuário com o mesmo ID retornar falha, 
 # se o email não tiver o @ retornar falha, 
-# senha tem que ser maior ou igual a 3 caracteres, 
+# senha tem que ser maior ou igsual a 3 caracteres, 
 # senão retornar OK
 @app.post("/usuario/")
-async def criar_usuário(usuario: Usuario):
-    if usuario.id in db_usuarios:
+async def criar_usuário(novo_usuario: Usuario):
+    
+    ids = map(lambda x: x['id'], db_usuarios)
+    
+    print(novo_usuario.id)
+    if novo_usuario.id in ids:
         return FALHA
-    db_usuarios[usuario.id] = usuario
-    return OK
+    
+    if not '@' in novo_usuario.email:
+        return FALHA 
+    
+    if len(novo_usuario.senha) < 3:
+        return FALHA
+    
+    novo_usuario = regras_cadastrar_usuario(novo_usuario.dict())
+    print(novo_usuario)
+    print(db_usuarios)
+    return novo_usuario
 
-
+     
 # Se o id do usuário existir, retornar os dados do usuário
 # senão retornar falha
-@app.get("/usuario/")
+@app.get("/usuario/{id}")
 async def retornar_usuario(id: int):
-    if id in db_usuarios:
-        return db_usuarios[id]
-    return FALHA
+    print('consulta pelo id: ', id)
+    return regras_pesquisar_usuario_pelo_id(id)
+
 
 
 # Se existir um usuário com exatamente o mesmo nome, retornar os dados do usuário
