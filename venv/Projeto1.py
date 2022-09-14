@@ -1,3 +1,4 @@
+import enum
 from re import X
 from urllib import request
 import fastapi 
@@ -74,9 +75,25 @@ def persistencia_pesquisar_usuario_pelo_id(id):
     print(id_procurado)
     return id_procurado
 
-def persistencia_salvar_produto():
-    ...
+def persistencia_pesquisar_usuario_pelo_nome(nome):
+    nome_procurado = None
+    for item in db_usuarios:
+        if item['nome'] == nome:
+            nome_procurado = item
+            break
+        return FALHA
+    print(nome_procurado)
+    return nome_procurado
 
+def persistencia_deletar_usuario_pelo_id(id):
+    for i, el in enumerate(db_usuarios):
+        if el['id'] == id:
+            db_usuarios.pop(i)
+            print(db_usuarios)
+            return OK
+        return FALHA
+            
+    
 
 #===========================================
 # Regras / Casos de uso
@@ -90,9 +107,11 @@ def regras_pesquisar_usuario_pelo_id(id):
     return persistencia_pesquisar_usuario_pelo_id(id)
     
 
-def regras_cadastrar_produto():
-    ...
+def regras_pesquisar_usuario_pelo_nome(nome):
+    return persistencia_pesquisar_usuario_pelo_nome(nome)
 
+def regras_deletar_usuario_pelo_id(id):
+    return persistencia_deletar_usuario_pelo_id(id)
 
 #===========================================
 # API Rest / Controlador
@@ -108,7 +127,6 @@ async def criar_usuário(novo_usuario: Usuario):
     
     ids = map(lambda x: x['id'], db_usuarios)
     
-    print(novo_usuario.id)
     if novo_usuario.id in ids:
         return FALHA
     
@@ -119,11 +137,19 @@ async def criar_usuário(novo_usuario: Usuario):
         return FALHA
     
     novo_usuario = regras_cadastrar_usuario(novo_usuario.dict())
-    print(novo_usuario)
     print(db_usuarios)
     return novo_usuario
 
-     
+
+#TODO verificar pq as duas rotas nao funcionam se as duas estiverem ativas, apenas a primeira funciona. Abaixo: 
+
+# Se existir um usuário com exatamente o mesmo nome, retornar os dados do usuário
+# senão retornar falha
+@app.get("/usuario/")
+async def retornar_usuario_com_nome(nome: str):
+    print('consulta pelo nome: ', nome)
+    return regras_pesquisar_usuario_pelo_nome(nome)
+
 # Se o id do usuário existir, retornar os dados do usuário
 # senão retornar falha
 @app.get("/usuario/{id}")
@@ -131,21 +157,13 @@ async def retornar_usuario(id: int):
     print('consulta pelo id: ', id)
     return regras_pesquisar_usuario_pelo_id(id)
 
-
-
-# Se existir um usuário com exatamente o mesmo nome, retornar os dados do usuário
-# senão retornar falha
-@app.get("/usuario/nome")
-async def retornar_usuario_com_nome(nome: str):
-    return FALHA
-
-
 # Se o id do usuário existir, deletar o usuário e retornar OK
 # senão retornar falha
 # ao deletar o usuário, deletar também endereços e carrinhos vinculados a ele
-@app.delete("/usuario/")
-async def deletar_usuario(id: int):
-    return FALHA
+@app.delete("/usuario/{id}")
+async def deletar_usuario(id: int):    
+    print("deletando usuario: ", id)
+    return regras_deletar_usuario_pelo_id(id)
 
 
 # Se não existir usuário com o id_usuario retornar falha, 
