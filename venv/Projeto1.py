@@ -53,11 +53,13 @@ class CarrinhoDeCompras(BaseModel):
     preco_total: float
     quantidade_de_produtos: int
 
-#alguns usuarios hard coded pra ajudar nos testes
+#alguns dados hard coded pra ajudar nos testes
 db_usuarios = [
-{"id": 1, "nome": "maira", "email": "mk@gmail.com", "senha": "123"}, {"id": 2, "nome": "leandro", "email": "lz@gmail.com", "senha": "123"} ]
+{"id": 1, "nome": "maira", "email": "mk@gmail.com", "senha": "123"}, {"id": 2, "nome": "leandro", "email": "lz@uol.com", "senha": "123"} ]
 db_produtos = []
-db_end = []        # enderecos_dos_usuarios
+db_end = [{'id': 1, 'rua': 'Rua A', 'cep': '000000', 'cidade': 'Ribeirao Preto', 'estado': 'SP', 'id_usuario': 2},
+{'id': 2, 'rua': 'Rua A', 'cep': '000000', 'cidade': 'Ribeirao Preto', 'estado': 'SP', 'id_usuario': 1},{'id': 3, 'rua': 'Rua A', 'cep': '000000', 'cidade': 'Ribeirao Preto', 'estado': 'SP', 'id_usuario': 2},
+{'id': 4, 'rua': 'Rua A', 'cep': '000000', 'cidade': 'Ribeirao Preto', 'estado': 'SP', 'id_usuario': 1}]        # enderecos_dos_usuarios
 db_carrinhos = []
 
 #===========================================
@@ -120,15 +122,32 @@ def persistencia_deletar_endereco_pelo_id(id_usuario, id_endereco):
         
 
 def persistencia_buscar_enderecos_por_usuario(id_usuario):
-    print(db_end)
     for i in db_end:
+        if not i['id_usuario'] in db_end:
+            return FALHA
         if i['id_usuario'] == id_usuario:
-            print(list(db_end))
-            return OK      
+            print(i)
+    return OK      
+
+
+def persistencia_buscar_email_mesmo_dominio(dominio):
+    for i in db_usuarios:
+        if dominio in i['email']:
+            print(i)
+           
+            
+def persistencia_cadastrar_produto(produto):
+    db_produtos.append(produto)
+    return produto 
+
+def persistencia_deletar_produto_pelo_id(id_produto):
+    for i in db_produtos:
+        if i['id'] == id_produto:
+            db_produtos.remove(i)
+            print(db_produtos)
+            return OK
     return FALHA
-    
-    
-    
+
 #===========================================
 # Regras / Casos de uso
 #===========================================
@@ -158,6 +177,15 @@ def regras_deletar_endereco_pelo_id(id_usuario, id_endereco):
 
 def regras_buscar_enderecos_por_usuario(id_usuario):
     return persistencia_buscar_enderecos_por_usuario(id_usuario)
+
+def regras_buscar_email_mesmo_dominio(dominio):
+    return persistencia_buscar_email_mesmo_dominio(dominio)
+
+def regras_cadastrar_produto(produto):
+    return persistencia_cadastrar_produto(produto)
+
+def regras_deletar_produto_pelo_id(id_produto):
+    return persistencia_deletar_produto_pelo_id(id_produto)
 
 #===========================================
 # API Rest / Controlador
@@ -212,9 +240,9 @@ async def retornar_enderecos_do_usuario(id_usuario: int):
 # Retornar todos os emails que possuem o mesmo domínio
 # (domínio do email é tudo que vêm depois do @)
 # senão retornar falha
-@app.get("/usuarios/emails/")
+@app.get("/emails/{dominio}")
 async def retornar_emails(dominio: str):
-    return FALHA
+    return regras_buscar_email_mesmo_dominio(dominio)
 
 
 # Se não existir usuário com o id_usuario retornar falha, 
@@ -244,15 +272,21 @@ async def deletar_endereco(id_usuario: int, id_endereco: int):
 # senão cria um produto e retornar OK
 @app.post("/produto/")
 async def criar_produto(produto: Produto):
-    return OK
-
+    ids = map(lambda x: x['id'], db_produtos)
+    if produto.id in ids:
+        return FALHA
+    produto = regras_cadastrar_produto(produto.dict())
+    print(db_produtos)
+    return produto
+    
 
 # Se não existir produto com o id_produto retornar falha, 
 # senão deleta produto correspondente ao id_produto e retornar OK
 # (lembrar de desvincular o produto dos carrinhos do usuário)
 @app.delete("/produto/{id_produto}/")
 async def deletar_produto(id_produto: int):
-    return OK
+    print("deletando produto: ", id_produto) 
+    return regras_deletar_produto_pelo_id(id_produto)
 
 
 # Se não existir usuário com o id_usuario ou id_produto retornar falha, 
