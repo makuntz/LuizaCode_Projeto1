@@ -1,3 +1,4 @@
+from distutils.command.clean import clean
 import enum
 from re import X
 from urllib import request
@@ -14,10 +15,12 @@ FALHA = "FALHA"
 
 # Classe representando os dados do endereço do cliente
 class Endereco(BaseModel):
+    id: int
     rua: str
     cep: str
     cidade: str
     estado: str
+    
 
 
 # Classe representando os dados do cliente
@@ -26,6 +29,7 @@ class Usuario(BaseModel):
     nome: str
     email: str
     senha: str
+    
 
 
 # Classe representando a lista de endereços de um cliente
@@ -49,11 +53,12 @@ class CarrinhoDeCompras(BaseModel):
     preco_total: float
     quantidade_de_produtos: int
 
-
-db_usuarios = []
-db_produtos = {}
-db_end = {}        # enderecos_dos_usuarios
-db_carrinhos = {}
+#alguns usuarios hard coded pra ajudar nos testes
+db_usuarios = [
+{"id": 1, "nome": "maira", "email": "mk@gmail.com", "senha": "123"}, {"id": 2, "nome": "leandro", "email": "lz@gmail.com", "senha": "123"} ]
+db_produtos = []
+db_end = []        # enderecos_dos_usuarios
+db_carrinhos = []
 
 #===========================================
 # Persistencia / Repositorio
@@ -86,15 +91,44 @@ def persistencia_pesquisar_usuario_pelo_nome(nome):
     return nome_procurado
 
 def persistencia_deletar_usuario_pelo_id(id):
-    for i, el in enumerate(db_usuarios):
-        if el['id'] == id:
-            db_usuarios.pop(i)
+    for i in db_usuarios:
+        if i['id'] == id:
+            db_usuarios.remove(i)           
             print(db_usuarios)
             return OK
-        return FALHA
+    return FALHA
+                    
+def persistencia_salvar_endereco(novo_endereco):
+    # db_end.append(novo_endereco)
+    return novo_endereco
             
-    
+            
+def persistencia_vincular_end_ao_usuario(end_com_usuario):
+    db_end.append(end_com_usuario)
+    return end_com_usuario
 
+##arrumar essa funcaos
+def persistencia_deletar_endereco_pelo_id(id_usuario, id_endereco):
+    for i in db_usuarios:
+        if i['id'] == id_usuario:
+            for x in db_end:
+                if x['id'] == id_endereco:
+                    db_end.remove(x)
+                    print(db_end)
+                    return OK
+    return FALHA
+        
+
+def persistencia_buscar_enderecos_por_usuario(id_usuario):
+    print(db_end)
+    for i in db_end:
+        if i['id_usuario'] == id_usuario:
+            print(list(db_end))
+            return OK      
+    return FALHA
+    
+    
+    
 #===========================================
 # Regras / Casos de uso
 #===========================================
@@ -106,27 +140,34 @@ def regras_cadastrar_usuario(novo_usuario):
 def regras_pesquisar_usuario_pelo_id(id):
     return persistencia_pesquisar_usuario_pelo_id(id)
     
-
 def regras_pesquisar_usuario_pelo_nome(nome):
     return persistencia_pesquisar_usuario_pelo_nome(nome)
 
 def regras_deletar_usuario_pelo_id(id):
     return persistencia_deletar_usuario_pelo_id(id)
 
+def regras_cadastrar_endereco(novo_endereco):
+    novo_endereco = persistencia_salvar_endereco(novo_endereco)
+    return novo_endereco
+
+def regras_vincular_end_ao_usuario(end_com_usuario):
+    return persistencia_vincular_end_ao_usuario(end_com_usuario)
+
+def regras_deletar_endereco_pelo_id(id_usuario, id_endereco):
+    return persistencia_deletar_endereco_pelo_id(id_usuario, id_endereco)
+
+def regras_buscar_enderecos_por_usuario(id_usuario):
+    return persistencia_buscar_enderecos_por_usuario(id_usuario)
+
 #===========================================
 # API Rest / Controlador
 #===========================================
 
-# Criar um usuário,
-# se tiver outro usuário com o mesmo ID retornar falha, 
-# se o email não tiver o @ retornar falha, 
-# senha tem que ser maior ou igsual a 3 caracteres, 
-# senão retornar OK
+###USUARIO
 @app.post("/usuario/")
 async def criar_usuário(novo_usuario: Usuario):
     
     ids = map(lambda x: x['id'], db_usuarios)
-    
     if novo_usuario.id in ids:
         return FALHA
     
@@ -140,40 +181,32 @@ async def criar_usuário(novo_usuario: Usuario):
     print(db_usuarios)
     return novo_usuario
 
-
-#TODO verificar pq as duas rotas nao funcionam se as duas estiverem ativas, apenas a primeira funciona. Abaixo: 
-
-# Se existir um usuário com exatamente o mesmo nome, retornar os dados do usuário
-# senão retornar falha
-@app.get("/usuario/")
+#TODO verificar pq as duas rotas nao funcionam se as duas estiverem ativas, apenas a primeira funciona. Abaixo: (é necessario deixar uma rota comentada para que a outra funcione)
+@app.get("/usuario/{nome}")
 async def retornar_usuario_com_nome(nome: str):
     print('consulta pelo nome: ', nome)
     return regras_pesquisar_usuario_pelo_nome(nome)
 
-# Se o id do usuário existir, retornar os dados do usuário
-# senão retornar falha
 @app.get("/usuario/{id}")
 async def retornar_usuario(id: int):
     print('consulta pelo id: ', id)
     return regras_pesquisar_usuario_pelo_id(id)
 
-# Se o id do usuário existir, deletar o usuário e retornar OK
-# senão retornar falha
-# ao deletar o usuário, deletar também endereços e carrinhos vinculados a ele
+#TODO lembrar de fazer deletar os enderecos vinculados a esse id
 @app.delete("/usuario/{id}")
 async def deletar_usuario(id: int):    
     print("deletando usuario: ", id)
     return regras_deletar_usuario_pelo_id(id)
 
-
+#--------
 # Se não existir usuário com o id_usuario retornar falha, 
 # senão retornar uma lista de todos os endereços vinculados ao usuário
 # caso o usuário não possua nenhum endereço vinculado a ele, retornar 
 # uma lista vazia
 ### Estudar sobre Path Params (https://fastapi.tiangolo.com/tutorial/path-params/)
-@app.get("/usuario/{id_usuario}/endereços/")
+@app.get("/usuario/{id_usuario}/enderecos/")
 async def retornar_enderecos_do_usuario(id_usuario: int):
-    return FALHA
+    return regras_buscar_enderecos_por_usuario(id_usuario)
 
 
 # Retornar todos os emails que possuem o mesmo domínio
@@ -188,16 +221,24 @@ async def retornar_emails(dominio: str):
 # senão cria um endereço, vincula ao usuário e retornar OK
 @app.post("/endereco/{id_usuario}/")
 async def criar_endereco(endereco: Endereco, id_usuario: int):
-    return OK
+    ids = map(lambda x: x['id'], db_usuarios)
+    if id_usuario in ids:
+        novo_endereco = regras_cadastrar_endereco(endereco.dict())   
+        novo_endereco['id_usuario'] = id_usuario
+        regras_vincular_end_ao_usuario(novo_endereco)
+        print(db_end)
+        return OK
+    return FALHA
 
 
 # Se não existir endereço com o id_endereco retornar falha, 
 # senão deleta endereço correspondente ao id_endereco e retornar OK
 # (lembrar de desvincular o endereço ao usuário)
-@app.delete("/endereco/{id_endereco}/")
-async def deletar_endereco(id_endereco: int):
-    return OK
-
+@app.delete("/usuario/{id_usuario}/endereco/{id_endereco}")
+async def deletar_endereco(id_usuario: int, id_endereco: int):
+    print("deletando endereco: ", id_endereco, " do usuario: ", id_usuario)
+    return regras_deletar_endereco_pelo_id(id_usuario, id_endereco)
+    
 
 # Se tiver outro produto com o mesmo ID retornar falha, 
 # senão cria um produto e retornar OK
