@@ -1,0 +1,13 @@
+###
+POST http://127.0.0.1:8000/carrinho/2/2/
+
+
+###
+GET http://127.0.0.1:8000/carrinho/1/
+
+###
+GET http://127.0.0.1:8000/carrinho/novarota/1/
+
+###
+DELETE http://127.0.0.1:8000/carrinho/2/
+

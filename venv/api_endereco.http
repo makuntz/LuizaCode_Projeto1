@@ -1,0 +1,22 @@
+
+###
+POST http://127.0.0.1:8000/endereco/1
+
+{
+    "id": 4,
+    "rua": "Rua A",
+    "cep": "000000",
+    "cidade": "Ribeirao Preto",
+    "estado": "SP"
+}
+
+
+###
+DELETE http://127.0.0.1:8000/usuario/1/endereco/1
+
+###
+GET http://127.0.0.1:8000/usuario/4/enderecos/
+
+###
+GET http://127.0.0.1:8000/emails/uol
+

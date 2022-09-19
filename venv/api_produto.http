@@ -1,0 +1,14 @@
+
+###
+POST  http://127.0.0.1:8000/produto/
+
+{
+    "id": 2,
+    "nome": "Notebook",
+    "descricao": "i7",
+    "preco": 3589.59
+} 
+
+
+###
+DELETE http://127.0.0.1:8000/produto/1

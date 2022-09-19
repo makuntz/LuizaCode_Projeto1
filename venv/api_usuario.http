@@ -1,0 +1,25 @@
+
+###
+POST http://127.0.0.1:8000/usuario/
+
+{   
+    "id": 3,
+    "nome": "maira",
+    "email": "mk@gmail.com",
+    "senha": "123"
+}
+
+###
+GET http://127.0.0.1:8000/usuario/3
+
+###
+GET http://127.0.0.1:8000/usuario/maira
+
+###
+DELETE http://127.0.0.1:8000/usuario/3
+
+
+
+
+
+
