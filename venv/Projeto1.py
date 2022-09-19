@@ -59,42 +59,37 @@ class CarrinhoDeCompras():
     def __init__(self, id_usuario, produtos):
         self.id_usuario = id_usuario
         self.produtos = produtos
+        self.preco_total = self.calcular_preco_total()
+        self.quantidade_produtos = self.calcular_quantidade_produtos()
         
-    def preco_total(self):
-        if len(self.produtos) == 0:
-            return 0
+    def calcular_preco_total(self):
         soma_total = 0
         for produto in self.produtos:
-            soma_total =+ produto['preco']
-            print(soma_total)
-            return soma_total
+            soma_total = soma_total + produto['preco']
+        return soma_total
         
-    def quantidade_produtos(self):
-        if len(self.produtos) == 0:
-            return 0
+    def calcular_quantidade_produtos(self):
         return len(self.produtos)
-    
-    def __str__(self):
-        return f"{self.id_usuario}{self.produtos}"
+            
 
-        
-
-#alguns dados hard coded pra ajudar nos testes
+#dados estao hard coded pra ajudar nos testes
 db_usuarios = [
 {"id": 1, "nome": "maira", "email": "mk@gmail.com", "senha": "123"}, {"id": 2, "nome": "leandro", "email": "lz@uol.com", "senha": "123"} ]
+
 db_produtos = [{"id": 1, "nome": "Notebook", "descricao": "i7", "preco": 3589.59}, {"id": 2, "nome": "Celular", "descricao": "Xiaomi", "preco": 2030.59} ]
+
 db_end = [{'id': 1, 'rua': 'Rua A', 'cep': '000000', 'cidade': 'Ribeirao Preto', 'estado': 'SP', 'id_usuario': 2},
 {'id': 2, 'rua': 'Rua A', 'cep': '000000', 'cidade': 'Ribeirao Preto', 'estado': 'SP', 'id_usuario': 1},{'id': 3, 'rua': 'Rua A', 'cep': '000000', 'cidade': 'Ribeirao Preto', 'estado': 'SP', 'id_usuario': 2},
-{'id': 4, 'rua': 'Rua A', 'cep': '000000', 'cidade': 'Ribeirao Preto', 'estado': 'SP', 'id_usuario': 1}]        # enderecos_dos_usuarios
-db_carrinhos = [{"id_usuario": 1, "produtos": [{"id": 1, "nome": "Notebook", "descricao": "i7", "preco": 3589.59}], "preco_total": 3589.59, "quantidade_produtos": 1}]
+{'id': 4, 'rua': 'Rua A', 'cep': '000000', 'cidade': 'Ribeirao Preto', 'estado': 'SP', 'id_usuario': 1}]
+
+# db_carrinhos = [{"id_usuario": 1, "produtos": [{"id": 1, "nome": "Notebook", "descricao": "i7", "preco": 3589.59}]}]
+db_carrinhos = []
 
 #===========================================
 # Persistencia / Repositorio
 #===========================================
 
 def persistencia_salvar_usuario(novo_usuario):
-    # codigo_novo_usuario = len(db_usuarios) + 1
-    # novo_usuario["id"] = codigo_novo_usuario
     db_usuarios.append(novo_usuario)
     return novo_usuario
     
@@ -174,9 +169,29 @@ def persistencia_deletar_produto_pelo_id(id_produto):
             return OK
     return FALHA
 
-def persistencia_criar_carrinho(carrinho):
-    db_carrinhos.append(carrinho)
-    return 
+def persistencia_buscar_carrinhoDeCompras(id_usuario):
+    for i in db_carrinhos:
+        if i['id_usuario'] == id_usuario:
+            print(i)
+            return OK
+    return FALHA
+
+def persistencia_buscar_itens_e_valor_total(id_usuario):
+    for i in db_carrinhos:
+        if i['id_usuario'] == id_usuario:
+            print(i['quantidade_produtos'])
+            print(i['preco_total'])
+            return OK
+    return FALHA
+
+def persistencia_deletar_carrinho(id_usuario):
+    for i in db_carrinhos:
+        if i['id_usuario'] == id_usuario:
+            db_carrinhos.remove(i)
+            print(db_carrinhos)
+            return OK
+    return FALHA
+    
 
 #===========================================
 # Regras / Casos de uso
@@ -217,8 +232,14 @@ def regras_cadastrar_produto(produto):
 def regras_deletar_produto_pelo_id(id_produto):
     return persistencia_deletar_produto_pelo_id(id_produto)
 
-def regras_criar_carrinho(carrinho):
-    return persistencia_criar_carrinho(carrinho)
+def regras_buscar_carrinhoDeCompras(id_usuario):
+    return persistencia_buscar_carrinhoDeCompras(id_usuario)
+
+def regras_buscar_itens_e_valor_total(id_usuario):
+    return persistencia_buscar_itens_e_valor_total(id_usuario)
+
+def regras_deletar_carrinho(id_usuario):
+    return persistencia_deletar_carrinho(id_usuario)
 #===========================================
 # API Rest / Controlador
 #===========================================
@@ -330,7 +351,6 @@ async def adicionar_carrinho(id_usuario: int, id_produto: int):
     ids_user = map(lambda x: x['id'], db_usuarios)
     ids_prod = map(lambda x: x['id'], db_produtos)
   
-    
     if not id_usuario in ids_user:
         return FALHA
     
@@ -355,8 +375,11 @@ async def adicionar_carrinho(id_usuario: int, id_produto: int):
             return FALHA
             
         usuario_carrinho = CarrinhoDeCompras(id_usuario, [produto_encontrado])
-        print(usuario_carrinho)
         
+        db_carrinhos.append(usuario_carrinho.__dict__)
+        # print(usuario_carrinho.__dict__)  
+        
+        print(db_carrinhos)
         return OK
     
     ##encontrar o carrinho do usuario
@@ -367,82 +390,48 @@ async def adicionar_carrinho(id_usuario: int, id_produto: int):
     index_carrinho_encontrado = None
     
     for carrinho in db_carrinhos: 
-            
         if carrinho['id_usuario'] == id_usuario:
             carrinho_encontrado = carrinho
             
     index_carrinho_encontrado = db_carrinhos.index(carrinho_encontrado)
-    print(index_carrinho_encontrado)     
+    # print(index_carrinho_encontrado)     
     
     lista_produtos = carrinho_encontrado['produtos']
     
-    
-    
     for produto in db_produtos: 
-        print(type([produto]))
-
-        if produto['id'] == id_produto:
-            lista_produtos.append(produto)
-            # regras_criar_carrinho(produto)
-    print(type(lista_produtos))
-    
-    for carrinho in db_carrinhos:
-        print(carrinho['id_usuario'])
-        # print(carrinho['produtos'])
-      
-    novo_carrinho = CarrinhoDeCompras(id_usuario, lista_produtos)
-    
-    print(novo_carrinho)
-    
-    
-    print(novo_carrinho['id_usuario'])
-    # db_carrinhos[index_carrinho_encontrado] = novo_carrinho
-    
-    
-     
-    
-    
-    
-    
-    
-    # for i in db_produtos:
-    #     if i['id'] == id_produto:
-    #         preco_produto = i['preco']
-    #         print(preco_produto)  
-            
-             
         
-            
+        if produto['id'] == id_produto:
+            lista_produtos.append(produto) 
     
+    novo_carrinho = CarrinhoDeCompras(id_usuario, lista_produtos)  
     
+    db_carrinhos[index_carrinho_encontrado] = novo_carrinho.__dict__
     
-   
+    # print(db_carrinhos)
+    return OK
     
-    
-    
-    
-
 
 # Se não existir carrinho com o id_usuario retornar falha, 
 # senão retorna o carrinho de compras.
+
 @app.get("/carrinho/{id_usuario}/")
 async def retornar_carrinho(id_usuario: int):
-    return CarrinhoDeCompras
+    return regras_buscar_carrinhoDeCompras(id_usuario)
 
 
 # Se não existir carrinho com o id_usuario retornar falha, 
 # senão retorna o o número de itens e o valor total do carrinho de compras.
-@app.get("/carrinho/{id_usuario}/")
+@app.get("/carrinho/novarota/{id_usuario}/")
 async def retornar_total_carrinho(id_usuario: int):
-    numero_itens, valor_total = 0
-    return numero_itens, valor_total
+    # numero_itens, valor_total = 0
+    return regras_buscar_itens_e_valor_total(id_usuario)
 
 
 # Se não existir usuário com o id_usuario retornar falha, 
 # senão deleta o carrinho correspondente ao id_usuario e retornar OK
 @app.delete("/carrinho/{id_usuario}/")
 async def deletar_carrinho(id_usuario: int):
-    return OK
+    return regras_deletar_carrinho(id_usuario)
 
 
 @app.get("/")
